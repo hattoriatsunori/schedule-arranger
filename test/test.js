@@ -52,17 +52,7 @@ describe('/schedules', () => {
   afterAll(async () => {
     passportStub.logout();
     passportStub.uninstall();
-
-    // テストで作成したデータを削除
-    const candidates = await Candidate.findAll({
-      where: { scheduleId: scheduleId }
-    });
-    const promises = candidates.map((c) => {
-      return c.destroy();
-    });
-    await Promise.all(promises)
-    const s = await Schedule.findByPk(scheduleId)
-    await s.destroy()
+    await deleteScheduleAggregate(scheduleId);
   });
 
   test('予定が作成でき、表示される', async () => {
@@ -90,3 +80,13 @@ describe('/schedules', () => {
       .expect(200)
   });
 });
+
+async function deleteScheduleAggregate(scheduleId) {
+  const candidates = await Candidate.findAll({
+    where: { scheduleId: scheduleId }
+  });
+  const promisesCandidateDestroy = candidates.map((c) => { return c.destroy(); });
+  await Promise.all(promisesCandidateDestroy);
+  const s = await Schedule.findByPk(scheduleId);
+  await s.destroy();
+}
