@@ -64,7 +64,7 @@ describe('/schedules', () => {
     const s = await Schedule.findByPk(scheduleId)
     await s.destroy()
   });
-  
+
   test('予定が作成でき、表示される', async () => {
     await User.upsert({ userId: 0, username: 'testuser' });
     const res = await request(app)
@@ -81,7 +81,12 @@ describe('/schedules', () => {
     scheduleId = createdSchedulePath.split('/schedules/')[1];
     await request(app)
       .get(createdSchedulePath)
-      // TODO 作成された予定と候補が表示されていることをテストする
+      .expect(/テスト予定1/)
+      .expect(/テストメモ1/)
+      .expect(/テストメモ2/)
+      .expect(/テスト候補1/)
+      .expect(/テスト候補2/)
+      .expect(/テスト候補3/)
       .expect(200)
   });
 });
