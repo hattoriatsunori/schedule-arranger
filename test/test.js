@@ -159,6 +159,12 @@ describe('/schedules/:scheduleId/users/:userId/comments', () => {
 });
 
 async function deleteScheduleAggregate(scheduleId) {
+  const comments = await Comment.findAll({
+    where: { scheduleId: scheduleId }
+  });
+  const promisesCommentDestroy = comments.map((c) => { return c.destroy(); });
+  await Promise.all(promisesCommentDestroy);
+
   const availabilities = await Availability.findAll({
     where: { scheduleId: scheduleId }
   });
