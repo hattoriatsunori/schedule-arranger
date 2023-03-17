@@ -195,3 +195,58 @@ describe('/schedules/:scheduleId?edit=1', () => {
     expect(candidates[1].candidateName).toBe('テスト更新候補2');
   });
 });
+
+describe('/schedules/:scheduleId?delete=1', () => {
+  beforeAll(() => {
+    passportStub.install(app);
+    passportStub.login({ id: 0, username: 'testuser' });
+  });
+
+  afterAll(() => {
+    passportStub.logout();
+    passportStub.uninstall();
+  });
+
+  test('予定に関連する全ての情報が削除できる', async () => {
+    await User.upsert({ userId: 0, username: 'testuser' });
+    const res = await request(app)
+      .post('/schedules')
+      .send({ scheduleName: 'テスト削除予定1', memo: 'テスト削除メモ1', candidates: 'テスト削除候補1' })
+    const createdSchedulePath = res.headers.location;
+    const scheduleId = createdSchedulePath.split('/schedules/')[1];
+
+    // 出欠作成
+    const candidate = await Candidate.findOne({
+      where: { scheduleId: scheduleId }
+    });
+    await request(app)
+      .post(`/schedules/${scheduleId}/users/${0}/candidates/${candidate.candidateId}`)
+      .send({ availability: 2 }); // 出席に更新
+
+    // コメント作成
+    await request(app)
+      .post(`/schedules/${scheduleId}/users/${0}/comments`)
+      .send({ comment: 'testcomment' })
+      .expect('{"status":"OK","comment":"testcomment"}');
+
+    // 削除
+    await request(app)
+      .post(`/schedules/${scheduleId}?delete=1`);
+
+    // テスト
+    const comments = await Comment.findAll({
+      where: { scheduleId: scheduleId }
+    });
+    expect(comments.length).toBe(0);
+    const availabilities = await Availability.findAll({
+      where: { scheduleId: scheduleId }
+    });
+    expect(availabilities.length).toBe(0);
+    const candidates = await Candidate.findAll({
+      where: { scheduleId: scheduleId }
+    });
+    expect(candidates.length).toBe(0);
+    const schedule = await Schedule.findByPk(scheduleId);
+    expect(!schedule).toBe(true);
+  });
+});
