@@ -161,6 +161,9 @@ router.post('/:scheduleId', authenticationEnsurer, async (req, res, next) => {
       } else {
         res.redirect('/schedules/' + schedule.scheduleId);
       }
+    } else if (parseInt(req.query.delete) === 1) {
+      await deleteScheduleAggregate(req.params.scheduleId);
+      res.redirect('/');
     } else {
       const err = new Error('不正なリクエストです');
       err.status = 400;
@@ -172,6 +175,29 @@ router.post('/:scheduleId', authenticationEnsurer, async (req, res, next) => {
     next(err);
   }
 });
+
+async function deleteScheduleAggregate(scheduleId) {
+  const comments = await Comment.findAll({
+    where: { scheduleId: scheduleId }
+  });
+  const promisesCommentDestroy = comments.map((c) => { return c.destroy(); });
+  await Promise.all(promisesCommentDestroy);
+
+  const availabilities = await Availability.findAll({
+    where: { scheduleId: scheduleId }
+  });
+  const promisesAvailabilityDestroy = availabilities.map((a) => { return a.destroy(); });
+  await Promise.all(promisesAvailabilityDestroy);
+  const candidates = await Candidate.findAll({
+    where: { scheduleId: scheduleId }
+  });
+  const promisesCandidateDestroy = candidates.map((c) => { return c.destroy(); });
+  await Promise.all(promisesCandidateDestroy);
+  const s = await Schedule.findByPk(scheduleId);
+  await s.destroy();
+}
+
+router.deleteScheduleAggregate = deleteScheduleAggregate;
 
 async function createCandidatesAndRedirect(candidateNames, scheduleId, res) {
   const candidates = candidateNames.map((c) => {
