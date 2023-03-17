@@ -16,20 +16,14 @@ router.get('/new', authenticationEnsurer, (req, res, next) => {
 router.post('/', authenticationEnsurer, async (req, res, next) => {
     const scheduleId = uuidv4();
     const updatedAt = new Date();
-    const schedule = await Schedule.create({
+    await Schedule.create({
       scheduleId: scheduleId,
       scheduleName: req.body.scheduleName.slice(0, 255) || '（名称未設定）',
       memo: req.body.memo,
       createdBy: req.user.id,
       updatedAt: updatedAt
     });
-    const candidateNames = req.body.candidates.trim().split('\n').map((s) => s.trim()).filter((s) => s !== "");
-    const candidates = candidateNames.map((c) => { return {
-      candidateName: c,
-      scheduleId: schedule.scheduleId
-    };});
-    await Candidate.bulkCreate(candidates);
-    res.redirect('/schedules/' + schedule.scheduleId);
+    createCandidatesAndRedirect(parseCandidateNames(req), scheduleId, res);
 });
 
 router.get('/:scheduleId', authenticationEnsurer, async (req, res, next) => {
@@ -142,6 +136,21 @@ router.get('/:scheduleId/edit', authenticationEnsurer, async (req, res, next) =>
 
 function isMine(req, schedule) {
   return schedule && parseInt(schedule.createdBy) === parseInt(req.user.id);
+}
+
+async function createCandidatesAndRedirect(candidateNames, scheduleId, res) {
+  const candidates = candidateNames.map((c) => {
+    return {
+      candidateName: c,
+      scheduleId: scheduleId
+    };
+  });
+  await Candidate.bulkCreate(candidates)
+  res.redirect('/schedules/' + scheduleId);
+}
+
+function parseCandidateNames(req) {
+  return req.body.candidates.trim().split('\n').map((s) => s.trim()).filter((s) => s !== "");
 }
 
 module.exports = router;
