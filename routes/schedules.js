@@ -138,6 +138,41 @@ function isMine(req, schedule) {
   return schedule && parseInt(schedule.createdBy) === parseInt(req.user.id);
 }
 
+router.post('/:scheduleId', authenticationEnsurer, async (req, res, next) => {
+  let schedule = await Schedule.findOne({
+    where: {
+      scheduleId: req.params.scheduleId
+    }
+  });
+  if (schedule && isMine(req, schedule)) {
+    if (parseInt(req.query.edit) === 1) {
+      const updatedAt = new Date();
+      schedule = await schedule.update({
+        scheduleId: schedule.scheduleId,
+        scheduleName: req.body.scheduleName.slice(0, 255) || '（名称未設定）',
+        memo: req.body.memo,
+        createdBy: req.user.id,
+        updatedAt: updatedAt
+      });
+      // 追加されているかチェック
+      const candidateNames = parseCandidateNames(req);
+      if (candidateNames) {
+        createCandidatesAndRedirect(candidateNames, schedule.scheduleId, res);
+      } else {
+        res.redirect('/schedules/' + schedule.scheduleId);
+      }
+    } else {
+      const err = new Error('不正なリクエストです');
+      err.status = 400;
+      next(err);
+    }
+  } else {
+    const err = new Error('指定された予定がない、または、編集する権限がありません');
+    err.status = 404;
+    next(err);
+  }
+});
+
 async function createCandidatesAndRedirect(candidateNames, scheduleId, res) {
   const candidates = candidateNames.map((c) => {
     return {
