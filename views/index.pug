@@ -1,8 +1,9 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  div.jumbotron.my-3
+    h1.display-4 予定調整くん
+    p.lead 予定調整くんは、GitHubで認証でき、予定を作って出欠が取れるサービスです
   div
     if user
       div
